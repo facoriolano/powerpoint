@@ -116,6 +116,10 @@
                     <i class="fa-solid fa-microphone mr-2"></i> <span id="voice-btn-text">Voz: Desl.</span>
                 </button>
                 <div class="h-6 w-px bg-white/30 mx-1"></div>
+                <!-- New Presentation Button -->
+                <button onclick="app.newPresentation()" class="hover:bg-white/20 px-3 py-1.5 rounded text-sm font-medium transition" title="Criar Nova Apresentação">
+                    <i class="fa-solid fa-file mr-1"></i> Nova
+                </button>
                 <button onclick="app.savePresentation()" class="hover:bg-white/20 px-3 py-1.5 rounded text-sm font-medium transition">
                     <i class="fa-solid fa-floppy-disk mr-1"></i> Salvar
                 </button>
@@ -232,6 +236,17 @@
                 this.setupBroadcastListener();
             }
 
+            newPresentation() {
+                if (confirm("Tem certeza que deseja criar uma nova apresentação? Todo o conteúdo não salvo será perdido.")) {
+                    this.slides = [];
+                    this.addSlide();
+                    this.currentSlideIndex = 0;
+                    this.saveToLocalStorage();
+                    this.updateUI();
+                    this.showToast("Nova apresentação criada!");
+                }
+            }
+
             nextSlide() {
                 if (this.currentSlideIndex < this.slides.length - 1) {
                     this.selectSlide(this.currentSlideIndex + 1);
@@ -244,7 +259,59 @@
                 }
             }
 
-            // --- Advanced Voice Recognition Logic ---
+            // --- Levenshtein Distance for Fuzzy Matching ---
+            // Calculates how many edits (insertions, deletions, substitutions) 
+            // it takes to turn word 'a' into word 'b'
+            levenshtein(a, b) {
+                if (a.length === 0) return b.length;
+                if (b.length === 0) return a.length;
+
+                const matrix = [];
+
+                // increment along the first column of each row
+                for (let i = 0; i <= b.length; i++) {
+                    matrix[i] = [i];
+                }
+
+                // increment each column in the first row
+                for (let j = 0; j <= a.length; j++) {
+                    matrix[0][j] = j;
+                }
+
+                // Fill in the rest of the matrix
+                for (let i = 1; i <= b.length; i++) {
+                    for (let j = 1; j <= a.length; j++) {
+                        if (b.charAt(i - 1) == a.charAt(j - 1)) {
+                            matrix[i][j] = matrix[i - 1][j - 1];
+                        } else {
+                            matrix[i][j] = Math.min(
+                                matrix[i - 1][j - 1] + 1, // substitution
+                                Math.min(
+                                    matrix[i][j - 1] + 1, // insertion
+                                    matrix[i - 1][j] + 1 // deletion
+                                )
+                            );
+                        }
+                    }
+                }
+
+                return matrix[b.length][a.length];
+            }
+
+            // Check if spoken word is "close enough" to target word
+            isFuzzyMatch(spoken, target) {
+                if (spoken === target) return true;
+                // Allow small words to fail strict match only if very close (1 edit)
+                // Allow longer words more leeway
+                const dist = this.levenshtein(spoken, target);
+                const len = Math.max(spoken.length, target.length);
+                
+                // Calculate similarity percentage
+                const similarity = 1 - (dist / len);
+                
+                // Threshold: 75% match (e.g., "responsorial" vs "responsavel" might pass depending on length)
+                return similarity >= 0.70; 
+            }
 
             normalizeText(text) {
                 return text
@@ -256,10 +323,9 @@
                     .trim();
             }
 
-            // Remove stop words for fuzzy matching
             getKeyWords(text) {
-                const stopWords = ['o', 'a', 'os', 'as', 'de', 'do', 'da', 'em', 'no', 'na', 'que', 'e'];
-                return text.split(' ').filter(w => !stopWords.includes(w) && w.length > 1);
+                const stopWords = ['o', 'a', 'os', 'as', 'de', 'do', 'da', 'em', 'no', 'na', 'que', 'e', 'para', 'com'];
+                return text.split(' ').filter(w => !stopWords.includes(w) && w.length > 2);
             }
 
             setupSpeechRecognition() {
@@ -290,33 +356,44 @@
                          triggered = true;
                          this.showToast("Comando: Próximo Slide");
                     } 
-                    // 2. Content Matching
+                    // 2. Intelligent Content Matching
                     else if (this.targetPhrase) {
-                        // Simple inclusion check
-                        if (transcript.includes(this.targetPhrase)) {
-                            triggered = true;
-                            this.showToast("Texto Lido: Avançando...");
-                        } 
-                        else {
-                            // Fallback: Check keywords match if strict match fails
-                            const transcriptWords = this.getKeyWords(transcript);
-                            const targetWords = this.getKeyWords(this.targetPhrase);
+                        const targetWords = this.getKeyWords(this.targetPhrase);
+                        const transcriptWords = this.getKeyWords(transcript);
+                        
+                        // We need at least 2 keywords to match for safety, 
+                        // or 1 if the target only has 1 unique keyword.
+                        if (targetWords.length > 0 && transcriptWords.length > 0) {
                             
-                            // Check if the last 2 spoken keywords match the target keywords
-                            if (targetWords.length > 0 && transcriptWords.length >= 2) {
-                                const lastSpoken = transcriptWords.slice(-2).join(" ");
-                                const targetEnd = targetWords.slice(-2).join(" ");
-                                if (lastSpoken === targetEnd) {
-                                    triggered = true;
-                                    this.showToast("Palavras-chave Detectadas");
+                            // Check the last few words spoken
+                            const wordsToCheck = 3; 
+                            const spokenTail = transcriptWords.slice(-wordsToCheck);
+                            const targetTail = targetWords.slice(-wordsToCheck);
+
+                            // Count matches using fuzzy logic
+                            let matchCount = 0;
+                            
+                            // Check if *any* of the target tail words appear in the spoken tail
+                            // This handles cases where user skips a word or adds filler
+                            targetTail.forEach(tWord => {
+                                if (spokenTail.some(sWord => this.isFuzzyMatch(sWord, tWord))) {
+                                    matchCount++;
                                 }
+                            });
+
+                            // Trigger if we matched enough distinct keywords at the end
+                            const requiredMatches = Math.min(2, targetTail.length);
+                            
+                            if (matchCount >= requiredMatches) {
+                                triggered = true;
+                                this.showToast("Texto Detectado (Aproximação)");
                             }
                         }
                     }
 
                     if (triggered) {
                         this.nextSlide();
-                        this.recognition.abort(); // Restart stream
+                        this.recognition.abort(); 
                     }
                 };
 
@@ -349,10 +426,8 @@
             getSlideTargetPhrase(slide) {
                 if (!slide || !slide.elements) return "";
 
-                // IMPORTANT: Clone elements to sort without affecting original slide
-                // Sort by TOP position (Visual Reading Order)
+                // Sort elements by TOP position to respect reading order
                 const sortedElements = [...slide.elements].sort((a, b) => {
-                    // Extract numerical value from "10%" or "10px" or "10"
                     const getVal = (styleStr) => {
                         const topMatch = styleStr.match(/top:\s*([\d.]+)%/);
                         if (topMatch) return parseFloat(topMatch[1]);
@@ -361,7 +436,7 @@
                     return getVal(a.style) - getVal(b.style);
                 });
 
-                // Combine text from sorted elements
+                // Combine text
                 const fullText = sortedElements
                     .filter(el => el.type === 'text')
                     .map(el => {
@@ -374,9 +449,9 @@
                 const cleanText = this.normalizeText(fullText);
                 if (!cleanText) return "";
 
-                // Get last 3 words (reduced form 4 to increase hit rate on labels)
+                // Get last 4 words
                 const words = cleanText.split(/\s+/);
-                const numWords = Math.min(3, words.length);
+                const numWords = Math.min(4, words.length);
                 return words.slice(-numWords).join(" ");
             }
 
@@ -389,14 +464,23 @@
             // --- Slide Management ---
 
             createSlide() {
+                const now = Date.now();
                 return {
-                    id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+                    id: now.toString(36) + Math.random().toString(36).substr(2),
                     elements: [
+                        // Default Title (Top)
                         {
-                            id: 'title-' + Date.now(),
+                            id: 'title-' + now,
                             type: 'text',
                             content: 'Título do Slide',
                             style: 'top: 10%; left: 10%; width: 80%; font-size: 40px; font-weight: bold; text-align: center; color: #333;'
+                        },
+                        // Default Body Text (Middle)
+                        {
+                            id: 'body-' + now,
+                            type: 'text',
+                            content: 'Clique para adicionar texto',
+                            style: 'top: 35%; left: 10%; width: 80%; height: auto; font-size: 24px; text-align: left; color: #4b5563;'
                         }
                     ]
                 };
@@ -613,7 +697,7 @@
                     elData.style = div.style.cssText;
                     this.renderThumbnails();
                     this.broadcastCurrentSlide();
-                    if(this.isVoiceActive) this.updateTargetPhrase(); // Re-calc if moved visually (though this just updates position prop, sort logic needs saving first really)
+                    if(this.isVoiceActive) this.updateTargetPhrase(); 
                 };
 
                 document.addEventListener('mousemove', onMouseMove);
