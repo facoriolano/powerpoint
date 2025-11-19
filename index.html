@@ -27,30 +27,44 @@
             overflow: hidden;
         }
 
-        /* Thumbnail specific scaling */
+        /* Thumbnail specific styles */
         .thumbnail-wrapper {
             position: relative;
             width: 100%;
-            padding-top: 56.25%; /* 16:9 aspect ratio */
+            /* Aspect ratio trick handled by padding-top inside or dimensions */
+            aspect-ratio: 16/9;
             background: #fff;
-            border: 2px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s;
+            border: 3px solid transparent;
+            cursor: grab;
+            transition: border-color 0.2s, transform 0.2s;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .thumbnail-wrapper:active {
+            cursor: grabbing;
         }
         .thumbnail-wrapper.active {
             border-color: #f97316; /* Orange border for active */
         }
-        .thumbnail-content {
+        .thumbnail-wrapper.drag-over {
+            border-top: 3px solid #3b82f6; /* Blue line indicator */
+        }
+
+        /* Thumbnail Scaling Magic:
+           We create a container that thinks it is 1000px wide (arbitrary large width),
+           then we scale it down to fit the sidebar width (~220px).
+           This preserves text wrapping and layout exactly.
+        */
+        .thumbnail-scale-container {
+            width: 1000px; /* Simulated Full Width */
+            aspect-ratio: 16/9;
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
             transform-origin: top left;
-            overflow: hidden;
-            pointer-events: none; /* Non-interactive thumbnails */
+            background: white;
+            pointer-events: none;
             user-select: none;
-            padding: 4px;
         }
 
         /* Draggable Elements on Slide */
@@ -121,7 +135,7 @@
             </div>
             <div class="flex items-center gap-2">
                 <!-- Voice Control Toggle -->
-                <button id="voice-btn" onclick="app.toggleVoiceControl()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-sm font-medium transition flex items-center border border-transparent" title="Avançar slide ao ler as últimas 4 palavras">
+                <button id="voice-btn" onclick="app.toggleVoiceControl()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-sm font-medium transition flex items-center border border-transparent" title="Comandos: 'Próximo', 'Avançar' ou ler texto do slide">
                     <i class="fa-solid fa-microphone mr-2"></i> <span id="voice-btn-text">Voz: Desl.</span>
                 </button>
                 <div class="h-6 w-px bg-white/30 mx-1"></div>
@@ -144,7 +158,7 @@
                 <!-- Slide Controls -->
                 <div class="flex gap-1 border-r border-gray-300 pr-4">
                     <button onclick="app.addSlide()" class="p-2 hover:bg-gray-200 rounded text-gray-700" title="Novo Slide">
-                        <i class="fa-solid fa-plus-square text-green-600"></i> <span class="text-sm font-medium">Novo Slide</span>
+                        <i class="fa-solid fa-plus-square text-green-600"></i> <span class="text-sm font-medium">Novo</span>
                     </button>
                     <button onclick="app.deleteCurrentSlide()" class="p-2 hover:bg-gray-200 rounded text-gray-700" title="Excluir Slide">
                         <i class="fa-solid fa-trash text-red-500"></i>
@@ -170,7 +184,7 @@
             <div class="flex items-center gap-2">
                 <div class="flex items-center mr-2" title="Tamanho da Fonte">
                     <span class="text-xs text-gray-500 mr-1"><i class="fa-solid fa-text-height"></i></span>
-                    <input type="number" id="fontSizeInput" min="8" max="120" value="16" onchange="app.changeFontSize(this.value)" class="w-16 p-1 border border-gray-300 rounded text-center text-sm">
+                    <input type="number" id="fontSizeInput" min="8" max="200" value="16" onchange="app.changeFontSize(this.value)" class="w-16 p-1 border border-gray-300 rounded text-center text-sm">
                 </div>
 
                 <button onclick="app.formatText('bold')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200" title="Negrito"><i class="fa-solid fa-bold"></i></button>
@@ -188,8 +202,9 @@
     <div class="flex-1 flex overflow-hidden">
         
         <!-- Sidebar: Thumbnails -->
-        <aside class="w-64 bg-gray-100 border-r border-gray-200 flex flex-col overflow-y-auto p-4 gap-4 shrink-0">
-            <div id="thumbnails-container" class="flex flex-col gap-4">
+        <aside class="w-72 bg-gray-100 border-r border-gray-200 flex flex-col p-4 gap-4 shrink-0 overflow-hidden">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Slides (Arraste para reordenar)</h3>
+            <div id="thumbnails-container" class="flex-1 overflow-y-auto flex flex-col gap-4 pb-4">
                 <!-- Thumbnails generated here -->
             </div>
         </aside>
@@ -210,7 +225,8 @@
             
             <!-- Speech Debug/Feedback Overlay -->
             <div id="speech-feedback" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm opacity-0 transition-opacity pointer-events-none z-50">
-                Ouvindo por: <span id="target-phrase" class="font-bold text-yellow-300">...</span>
+                <div class="text-xs text-gray-300 text-center">Comandos: "Próximo" ou ler texto</div>
+                <div class="mt-1 text-center">Alvo: <span id="target-phrase" class="font-bold text-yellow-300">...</span></div>
             </div>
 
         </main>
@@ -227,14 +243,14 @@
     <script>
         /**
          * WebPoint Presentation Application
-         * Handles slide management, editing, projection, and voice control.
          */
         class PresentationApp {
             constructor() {
                 // State
                 this.slides = [];
                 this.currentSlideIndex = 0;
-                this.draggedItemType = null;
+                this.draggedItemType = null; // For adding new elements
+                this.draggingSlideIndex = null; // For reordering slides
                 this.broadcastChannel = new BroadcastChannel('webpoint_presentation');
                 
                 // Voice Control State
@@ -255,7 +271,7 @@
                 this.loadFromLocalStorage();
                 if (!this.slides || this.slides.length === 0) {
                     this.slides = [];
-                    this.addSlide(); // Add default first slide
+                    this.addSlide();
                 } else {
                     this.renderThumbnails();
                     this.renderCurrentSlide();
@@ -284,19 +300,28 @@
 
             // --- Voice Recognition Logic (Portuguese) ---
 
+            normalizeText(text) {
+                return text
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "") // Remove accents
+                    .replace(/[^\w\s]/g, "") // Remove punctuation
+                    .trim();
+            }
+
             setupSpeechRecognition() {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 
                 if (!SpeechRecognition) {
                     this.voiceBtn.style.display = 'none';
-                    console.warn("Web Speech API not supported in this browser.");
+                    console.warn("Web Speech API not supported.");
                     return;
                 }
 
                 this.recognition = new SpeechRecognition();
                 this.recognition.continuous = true;
                 this.recognition.interimResults = true;
-                this.recognition.lang = 'pt-BR'; // Alterado para Português
+                this.recognition.lang = 'pt-BR'; 
 
                 this.recognition.onresult = (event) => {
                     if (!this.isVoiceActive) return;
@@ -304,62 +329,57 @@
                     // Get the latest result
                     const resultsLength = event.results.length;
                     const latestResult = event.results[resultsLength - 1];
-                    const transcript = latestResult[0].transcript.trim().toLowerCase();
+                    let transcript = latestResult[0].transcript;
+                    
+                    // Normalize: lowercase, remove accents
+                    const cleanTranscript = this.normalizeText(transcript);
 
-                    // Check if valid target exists
-                    if (this.targetPhrase && this.targetPhrase.length > 0) {
-                        // Check if the transcript contains the target phrase (allowing for some trailing noise or punctuation)
-                        if (transcript.includes(this.targetPhrase)) {
-                            console.log(`Matched! "${transcript}" contains "${this.targetPhrase}"`);
-                            
-                            // Visual feedback
-                            this.showToast("Comando de Voz: Próximo Slide");
-                            
-                            // Trigger Next Slide
-                            this.nextSlide();
-                                
-                            // Reset recognition to prevent double triggers on same sentence
-                            this.recognition.abort(); 
-                            setTimeout(() => {
-                                if(this.isVoiceActive) this.recognition.start();
-                            }, 100);
+                    console.log("Ouvido:", cleanTranscript);
+
+                    let triggered = false;
+
+                    // 1. Check for Command: "Próximo slide" / "Avançar"
+                    if (cleanTranscript.includes("proximo") || cleanTranscript.includes("avancar")) {
+                         triggered = true;
+                         this.showToast("Comando Voz: Próximo");
+                    } 
+                    // 2. Check for Slide Text Content (Sliding window match)
+                    else if (this.targetPhrase && this.targetPhrase.length > 0) {
+                        if (cleanTranscript.includes(this.targetPhrase)) {
+                            triggered = true;
+                            this.showToast("Texto Lido: Próximo Slide");
                         }
                     }
-                };
 
-                this.recognition.onerror = (event) => {
-                    console.error("Speech recognition error", event.error);
-                    if (event.error === 'not-allowed') {
-                        this.showToast("Acesso ao microfone negado.");
-                        this.setVoiceState(false);
+                    if (triggered && latestResult.isFinal) {
+                         this.nextSlide();
+                    } else if (triggered && !latestResult.isFinal) {
+                        // If we catch it in interim, force jump and reset
+                        this.nextSlide();
+                        this.recognition.abort(); 
                     }
                 };
-                
-                // Auto-restart if it stops unexpectedly while active
+
                 this.recognition.onend = () => {
                     if (this.isVoiceActive) {
-                        this.recognition.start();
+                        setTimeout(() => this.recognition.start(), 500);
                     }
                 };
             }
 
             toggleVoiceControl() {
-                if (!this.recognition) {
-                    this.showToast("Controle de voz não suportado.");
-                    return;
-                }
+                if (!this.recognition) return;
                 this.setVoiceState(!this.isVoiceActive);
             }
 
             setVoiceState(isActive) {
                 this.isVoiceActive = isActive;
-                
                 if (this.isVoiceActive) {
-                    this.recognition.start();
+                    try { this.recognition.start(); } catch(e){}
                     this.voiceBtn.classList.add('recording-pulse');
                     this.voiceBtnText.innerText = "Ouvindo...";
                     this.speechFeedback.classList.remove('opacity-0');
-                    this.updateTargetPhrase(); // Calculate target immediately
+                    this.updateTargetPhrase();
                 } else {
                     this.recognition.stop();
                     this.voiceBtn.classList.remove('recording-pulse');
@@ -371,33 +391,30 @@
             getSlideTargetPhrase(slide) {
                 if (!slide || !slide.elements) return "";
 
-                // Extract all text content from slide
+                // Combine text
                 const fullText = slide.elements
-                    .filter(el => el.type === 'text') // Only check text elements
+                    .filter(el => el.type === 'text')
                     .map(el => {
                         const tmp = document.createElement('div');
                         tmp.innerHTML = el.content;
-                        return (tmp.textContent || tmp.innerText || "").trim();
+                        return tmp.innerText || "";
                     })
                     .join(" ");
 
-                // Clean text: remove punctuation, extra spaces, lowercase
-                const cleanText = fullText.replace(/[^\w\sÀ-ÿ]|_/g, "").replace(/\s+/g, " ").trim().toLowerCase();
-                
+                const cleanText = this.normalizeText(fullText);
                 if (!cleanText) return "";
 
-                // Get last 4 words
-                const words = cleanText.split(" ");
-                const lastFour = words.slice(-4).join(" ");
+                // Get last 3-4 words for better matching context
+                const words = cleanText.split(/\s+/);
+                const numWords = Math.min(4, words.length);
+                const lastWords = words.slice(-numWords).join(" ");
                 
-                return lastFour;
+                return lastWords;
             }
 
             updateTargetPhrase() {
                 const slide = this.slides[this.currentSlideIndex];
                 this.targetPhrase = this.getSlideTargetPhrase(slide);
-                
-                // Update Debug Display
                 if (this.targetPhrase) {
                     this.targetPhraseEl.innerText = `"${this.targetPhrase}"`;
                 } else {
@@ -414,14 +431,8 @@
                         {
                             id: 'title-' + Date.now(),
                             type: 'text',
-                            content: 'Clique duas vezes para adicionar título',
+                            content: 'Título do Slide',
                             style: 'top: 10%; left: 10%; width: 80%; font-size: 40px; font-weight: bold; text-align: center; color: #333;'
-                        },
-                        {
-                            id: 'subtitle-' + Date.now(),
-                            type: 'text',
-                            content: 'Clique duas vezes para adicionar subtítulo',
-                            style: 'top: 40%; left: 20%; width: 60%; font-size: 20px; text-align: center; color: #666;'
                         }
                     ]
                 };
@@ -429,23 +440,19 @@
 
             addSlide() {
                 const newSlide = this.createSlide();
-                
                 if (this.slides.length === 0) {
-                    // Initial slide logic
                     this.slides.push(newSlide);
                     this.currentSlideIndex = 0;
                 } else {
-                    // Insert after current
                     this.slides.splice(this.currentSlideIndex + 1, 0, newSlide);
                     this.currentSlideIndex++;
                 }
-                
                 this.updateUI();
             }
 
             deleteCurrentSlide() {
                 if (this.slides.length <= 1) {
-                    this.showToast("Não é possível excluir o último slide.");
+                    this.showToast("Mínimo 1 slide.");
                     return;
                 }
                 this.slides.splice(this.currentSlideIndex, 1);
@@ -456,7 +463,7 @@
             }
 
             selectSlide(index) {
-                this.saveCurrentSlideState(); // Save changes before switching
+                this.saveCurrentSlideState();
                 this.currentSlideIndex = index;
                 this.updateUI();
             }
@@ -464,55 +471,97 @@
             updateUI() {
                 this.renderThumbnails();
                 this.renderCurrentSlide();
-                this.broadcastCurrentSlide(); // Sync with projection
-                
-                // Update voice target when slide changes
-                if (this.isVoiceActive) {
-                    this.updateTargetPhrase();
-                }
+                this.broadcastCurrentSlide();
+                if (this.isVoiceActive) this.updateTargetPhrase();
             }
 
-            // --- Rendering ---
+            // --- Thumbnail & Reordering Logic ---
 
             renderThumbnails() {
                 this.thumbnailsContainer.innerHTML = '';
+                const containerWidth = this.thumbnailsContainer.clientWidth - 32; // approx padding
+                
+                // Calculate scale factor: The 'virtual' slide is 1000px wide. 
+                // We need to fit it into the sidebar width.
+                const scale = containerWidth / 1000;
+
                 this.slides.forEach((slide, index) => {
                     const wrapper = document.createElement('div');
                     wrapper.className = `thumbnail-wrapper ${index === this.currentSlideIndex ? 'active' : ''}`;
+                    wrapper.draggable = true; // Enable drag for slide reordering
+                    
+                    // Drag Events for Reordering
+                    wrapper.ondragstart = (e) => this.handleThumbDragStart(e, index);
+                    wrapper.ondragover = (e) => this.handleThumbDragOver(e, wrapper);
+                    wrapper.ondragleave = (e) => wrapper.classList.remove('drag-over');
+                    wrapper.ondrop = (e) => this.handleThumbDrop(e, index);
                     wrapper.onclick = () => this.selectSlide(index);
 
-                    // Mini content preview (simplified)
-                    const content = document.createElement('div');
-                    content.className = 'thumbnail-content';
-                    content.style.transform = 'scale(0.2)'; // Scale down for preview
-                    
+                    // Scaled Content Container
+                    const scaleContainer = document.createElement('div');
+                    scaleContainer.className = 'thumbnail-scale-container';
+                    // Apply scale dynamically based on sidebar width
+                    scaleContainer.style.transform = `scale(${scale})`;
+
                     slide.elements.forEach(el => {
                         const div = document.createElement('div');
                         div.innerHTML = el.content;
                         div.style.cssText = el.style;
-                        div.style.position = 'absolute'; // Ensure absolute positioning applies
-                        content.appendChild(div);
+                        div.style.position = 'absolute';
+                        scaleContainer.appendChild(div);
                     });
 
                     const number = document.createElement('div');
                     number.innerText = index + 1;
-                    number.className = 'absolute bottom-1 left-2 text-xs text-gray-500 font-bold z-10';
+                    number.className = 'absolute bottom-1 left-2 text-xs text-white bg-black/50 px-1.5 rounded font-bold z-10';
 
-                    wrapper.appendChild(content);
+                    wrapper.appendChild(scaleContainer);
                     wrapper.appendChild(number);
                     this.thumbnailsContainer.appendChild(wrapper);
                 });
                 
-                // Scroll active thumbnail into view
                 const activeThumb = this.thumbnailsContainer.children[this.currentSlideIndex];
                 if(activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
 
+            // --- Reordering Handlers ---
+            handleThumbDragStart(e, index) {
+                this.draggingSlideIndex = index;
+                e.dataTransfer.effectAllowed = 'move';
+                // Small delay to let UI update before drag image is set (optional)
+            }
+
+            handleThumbDragOver(e, wrapper) {
+                e.preventDefault(); // Necessary to allow dropping
+                e.dataTransfer.dropEffect = 'move';
+                wrapper.classList.add('drag-over');
+            }
+
+            handleThumbDrop(e, dropIndex) {
+                e.preventDefault();
+                this.thumbnailsContainer.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                
+                if (this.draggingSlideIndex === null || this.draggingSlideIndex === dropIndex) return;
+
+                // Reorder array
+                const slideToMove = this.slides[this.draggingSlideIndex];
+                this.slides.splice(this.draggingSlideIndex, 1);
+                this.slides.splice(dropIndex, 0, slideToMove);
+
+                // Update selection to follow the moved slide
+                this.currentSlideIndex = dropIndex;
+                this.draggingSlideIndex = null;
+                
+                this.updateUI(); // Re-render
+            }
+
+
+            // --- Rendering Main Stage ---
+
             renderCurrentSlide() {
                 const slide = this.slides[this.currentSlideIndex];
                 this.stage.innerHTML = '';
-
-                if (!slide) return; // Safety check to prevent undefined access
+                if (!slide) return;
 
                 slide.elements.forEach(el => {
                     this.createDOMElementOnStage(el);
@@ -524,38 +573,32 @@
                 div.id = elData.id;
                 div.className = 'slide-element p-2 focus:outline-none';
                 div.style.cssText = elData.style;
-                
-                // Content
                 div.innerHTML = elData.content;
                 
                 if (elData.type === 'shape') {
-                    div.style.background = '#cbd5e1';
-                    div.style.border = '1px solid #94a3b8';
+                    if(!div.style.background) div.style.background = '#cbd5e1';
+                    if(!div.style.border) div.style.border = '1px solid #94a3b8';
                 }
                 
-                // Make Editable
                 div.contentEditable = true;
-                div.setAttribute('placeholder', 'Digite aqui...');
+                div.setAttribute('placeholder', 'Digite...');
 
-                // Drag Logic Handlers
+                // Events
                 div.onmousedown = (e) => this.handleElementMouseDown(e, div, elData);
                 div.oninput = () => {
-                     // Update data model on text change
                      elData.content = div.innerHTML;
-                     this.broadcastCurrentSlide(); // Live typing sync
-                     // Update voice target if text changes
+                     this.broadcastCurrentSlide();
                      if(this.isVoiceActive) this.updateTargetPhrase();
                 };
-                // Click to update font size input
                 div.onclick = () => {
                     const fontSize = window.getComputedStyle(div).fontSize;
-                    this.fontSizeInput.value = parseInt(fontSize);
+                    this.fontSizeInput.value = parseInt(fontSize) || 16;
                 }
 
                 this.stage.appendChild(div);
             }
 
-            // --- Drag and Drop (Insert & Move) ---
+            // --- Drag and Drop (Insert Elements) ---
 
             handleDragStart(e, type) {
                 this.draggedItemType = type;
@@ -569,6 +612,9 @@
 
             handleDrop(e) {
                 e.preventDefault();
+                // Distinction: Dropping a new element vs Reordering slides
+                // If draggedItemType is null, it might be a slide reorder (handled by handleThumbDrop)
+                // But handleThumbDrop is on the sidebar. This is the stage.
                 if (!this.draggedItemType) return;
 
                 const rect = this.stage.getBoundingClientRect();
@@ -579,18 +625,17 @@
                     id: 'el-' + Date.now(),
                     type: this.draggedItemType,
                     content: this.draggedItemType === 'image' ? '<i class="fa-solid fa-image fa-3x text-gray-400"></i><br>Imagem' : 
-                             this.draggedItemType === 'shape' ? '' : 'Caixa de Texto',
+                             this.draggedItemType === 'shape' ? '' : 'Novo Texto',
                     style: `top: ${y}%; left: ${x}%; position: absolute; min-width: 150px; min-height: 50px; font-size: 20px;`
                 };
 
-                // Specific styles
                 if (this.draggedItemType === 'image') {
                     newEl.style += 'background: #f3f4f6; border: 2px dashed #ccc; display:flex; align-items:center; justify-content:center; text-align:center;';
                 }
 
                 this.slides[this.currentSlideIndex].elements.push(newEl);
                 this.renderCurrentSlide();
-                this.renderThumbnails(); // update thumbnail
+                this.renderThumbnails();
                 this.draggedItemType = null;
                 if(this.isVoiceActive) this.updateTargetPhrase();
             }
@@ -598,46 +643,33 @@
             // --- Element Moving Logic ---
             
             handleElementMouseDown(e, div, elData) {
-                // Don't drag if editing text (clicked inside) unless it's the border
                 if (document.activeElement === div) return;
-
-                e.stopPropagation(); // Prevent deselect
+                e.stopPropagation();
                 
                 this.stage.querySelectorAll('.slide-element').forEach(el => el.classList.remove('selected'));
                 div.classList.add('selected');
                 
-                // Update font size input for selected
                 const fontSize = window.getComputedStyle(div).fontSize;
-                this.fontSizeInput.value = parseInt(fontSize);
+                this.fontSizeInput.value = parseInt(fontSize) || 16;
 
                 const startX = e.clientX;
                 const startY = e.clientY;
-                const rect = div.getBoundingClientRect();
                 const stageRect = this.stage.getBoundingClientRect();
-
-                // Initial offsets in %
                 const startLeft = parseFloat(div.style.left);
                 const startTop = parseFloat(div.style.top);
 
                 const onMouseMove = (moveEvent) => {
                     const dxPx = moveEvent.clientX - startX;
                     const dyPx = moveEvent.clientY - startY;
-
-                    // Convert px delta to % delta based on stage size
                     const dxPercent = (dxPx / stageRect.width) * 100;
                     const dyPercent = (dyPx / stageRect.height) * 100;
-
-                    const newLeft = startLeft + dxPercent;
-                    const newTop = startTop + dyPercent;
-
-                    div.style.left = `${newLeft}%`;
-                    div.style.top = `${newTop}%`;
+                    div.style.left = `${startLeft + dxPercent}%`;
+                    div.style.top = `${startTop + dyPercent}%`;
                 };
 
                 const onMouseUp = () => {
                     document.removeEventListener('mousemove', onMouseMove);
                     document.removeEventListener('mouseup', onMouseUp);
-                    // Save final position
                     elData.style = div.style.cssText;
                     this.renderThumbnails();
                     this.broadcastCurrentSlide();
@@ -657,34 +689,29 @@
 
             formatText(command, value = null) {
                 document.execCommand(command, false, value);
-                // Force update model
                 this.saveCurrentSlideState();
             }
 
             changeFontSize(val) {
-                // Try to change style of selected block first
                 const selected = this.stage.querySelector('.slide-element.selected');
                 if (selected) {
                     selected.style.fontSize = val + 'px';
-                    this.saveCurrentSlideState();
+                    // Also update the internal data model immediately
+                    const elId = selected.id;
+                    const dataEl = this.slides[this.currentSlideIndex].elements.find(e => e.id === elId);
+                    if(dataEl) dataEl.style = selected.style.cssText;
+                    
+                    this.renderThumbnails(); // Refresh thumb to see font size change
                 } else {
-                    // If inside contenteditable but no block selected explicitly
-                    document.execCommand('fontSize', false, '7'); // temp
-                    // This is complex with contenteditable, so we prefer block level
-                    // Fallback: If user is typing, it's harder. 
-                    // For this app, we suggest selecting the block border first.
-                    this.showToast("Selecione a caixa (borda) para alterar o tamanho da fonte.");
+                    document.execCommand('fontSize', false, '7'); 
+                    this.showToast("Dica: Selecione a borda da caixa para mudar a fonte.");
                 }
             }
 
             saveCurrentSlideState() {
                 if (this.currentSlideIndex >= this.slides.length) return;
-
-                // Sync DOM back to JSON model
                 const currentSlide = this.slides[this.currentSlideIndex];
                 const domElements = Array.from(this.stage.children);
-                
-                // Update content of existing elements
                 domElements.forEach(domEl => {
                     const dataEl = currentSlide.elements.find(e => e.id === domEl.id);
                     if (dataEl) {
@@ -706,11 +733,10 @@
                 const win = window.open('', 'WebPointPresentation', `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`);
                 
                 if (!win) {
-                    this.showToast("Pop-up bloqueado! Permita pop-ups para apresentar.");
+                    this.showToast("Pop-up bloqueado! Permita pop-ups.");
                     return;
                 }
 
-                // Inject Receiver Code
                 const htmlContent = `
                     <!DOCTYPE html>
                     <html lang="pt-BR">
@@ -732,9 +758,7 @@
                         </style>
                     </head>
                     <body>
-                        <div id="stage">
-                            <div class="h-full flex items-center justify-center text-gray-400">Aguardando apresentador...</div>
-                        </div>
+                        <div id="stage"></div>
                         <script>
                             const stage = document.getElementById('stage');
                             const bc = new BroadcastChannel('webpoint_presentation');
@@ -747,13 +771,11 @@
                             function renderSlide(slide) {
                                 stage.innerHTML = '';
                                 if(!slide) return;
-                                
                                 slide.elements.forEach(el => {
                                     const div = document.createElement('div');
                                     div.innerHTML = el.content;
                                     div.style.cssText = el.style;
                                     div.className = 'slide-element';
-                                    // Remove editable attributes for view mode
                                     div.removeAttribute('contenteditable');
                                     div.style.border = 'none';
                                     div.style.cursor = 'default';
@@ -761,16 +783,14 @@
                                 });
                             }
                             
-                            // Capture arrow keys and send back to controller
                             document.addEventListener('keydown', (e) => {
-                                if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+                                if (['ArrowRight', 'ArrowDown', 'Space'].includes(e.code)) {
                                     bc.postMessage({ type: 'remote_nav', action: 'next' });
-                                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                                } else if (['ArrowLeft', 'ArrowUp'].includes(e.code)) {
                                     bc.postMessage({ type: 'remote_nav', action: 'prev' });
                                 }
                             });
 
-                            // Signal readiness
                             bc.postMessage({ type: 'ready' });
                         <\/script>
                     </body>
@@ -780,14 +800,11 @@
                 win.document.open();
                 win.document.write(htmlContent);
                 win.document.close();
-
-                // Sync immediately
                 setTimeout(() => this.broadcastCurrentSlide(), 500);
             }
 
             setupBroadcastListener() {
                 this.broadcastChannel.onmessage = (event) => {
-                    // Handle remote navigation from the projection window
                     if (event.data.type === 'remote_nav') {
                         if (event.data.action === 'next') this.nextSlide();
                         if (event.data.action === 'prev') this.prevSlide();
@@ -807,15 +824,11 @@
 
             setupKeyboardNav() {
                 document.addEventListener('keydown', (e) => {
-                    // Ignore if typing in an editable field
                     if (e.target.isContentEditable) return;
-
                     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                         this.nextSlide();
                     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
                         this.prevSlide();
-                    } else if (e.key === 'Delete' || e.key === 'Backspace') {
-                        // Logic for delete handled separately
                     }
                 });
             }
@@ -828,34 +841,24 @@
                 const saved = localStorage.getItem('webpoint_slides');
                 if (saved) {
                     try {
-                        const parsed = JSON.parse(saved);
-                        if (Array.isArray(parsed)) {
-                            this.slides = parsed;
-                        } else {
-                            this.slides = [];
-                        }
-                    } catch (e) {
-                        console.error("Failed to load slides", e);
-                        this.slides = [];
-                    }
+                        this.slides = JSON.parse(saved) || [];
+                    } catch (e) { this.slides = []; }
                 }
             }
 
             setupAutoSave() {
-                setInterval(() => {
-                    this.saveCurrentSlideState();
-                }, 5000);
+                setInterval(() => this.saveCurrentSlideState(), 5000);
             }
 
             savePresentation() {
                 this.saveCurrentSlideState();
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.slides));
-                const downloadAnchorNode = document.createElement('a');
-                downloadAnchorNode.setAttribute("href", dataStr);
-                downloadAnchorNode.setAttribute("download", "apresentacao.json");
-                document.body.appendChild(downloadAnchorNode);
-                downloadAnchorNode.click();
-                downloadAnchorNode.remove();
+                const a = document.createElement('a');
+                a.href = dataStr;
+                a.download = "apresentacao.json";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
                 this.showToast("Apresentação salva!");
             }
 
@@ -869,34 +872,25 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
-                        const loadedSlides = JSON.parse(e.target.result);
-                        if (Array.isArray(loadedSlides)) {
-                            this.slides = loadedSlides;
-                            this.currentSlideIndex = 0;
-                            this.updateUI();
-                            this.showToast("Apresentação carregada com sucesso!");
-                        }
-                    } catch (err) {
-                        this.showToast("Erro ao ler arquivo JSON.");
-                    }
+                        this.slides = JSON.parse(e.target.result) || [];
+                        this.currentSlideIndex = 0;
+                        this.updateUI();
+                        this.showToast("Carregado!");
+                    } catch (err) { this.showToast("Erro ao abrir."); }
                 };
                 reader.readAsText(file);
-                event.target.value = ''; // Reset input
+                event.target.value = '';
             }
 
             showToast(msg) {
                 const toast = document.getElementById('toast');
                 toast.innerText = msg;
                 toast.classList.remove('translate-y-20', 'opacity-0');
-                setTimeout(() => {
-                    toast.classList.add('translate-y-20', 'opacity-0');
-                }, 3000);
+                setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
             }
         }
 
-        // Initialize App
         const app = new PresentationApp();
-
     </script>
 </body>
 </html>
