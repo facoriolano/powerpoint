@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebPoint Presentation App</title>
+    <title>WebPoint - Aplicativo de Apresentação</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -121,19 +121,19 @@
             </div>
             <div class="flex items-center gap-2">
                 <!-- Voice Control Toggle -->
-                <button id="voice-btn" onclick="app.toggleVoiceControl()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-sm font-medium transition flex items-center border border-transparent" title="Auto-advance slide when reading last 4 words">
-                    <i class="fa-solid fa-microphone mr-2"></i> <span id="voice-btn-text">Voice Mode: Off</span>
+                <button id="voice-btn" onclick="app.toggleVoiceControl()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-sm font-medium transition flex items-center border border-transparent" title="Avançar slide ao ler as últimas 4 palavras">
+                    <i class="fa-solid fa-microphone mr-2"></i> <span id="voice-btn-text">Voz: Desl.</span>
                 </button>
                 <div class="h-6 w-px bg-white/30 mx-1"></div>
                 <button onclick="app.savePresentation()" class="hover:bg-white/20 px-3 py-1.5 rounded text-sm font-medium transition">
-                    <i class="fa-solid fa-floppy-disk mr-1"></i> Save
+                    <i class="fa-solid fa-floppy-disk mr-1"></i> Salvar
                 </button>
                 <button onclick="app.loadPresentation()" class="hover:bg-white/20 px-3 py-1.5 rounded text-sm font-medium transition">
-                    <i class="fa-solid fa-folder-open mr-1"></i> Load
+                    <i class="fa-solid fa-folder-open mr-1"></i> Carregar
                 </button>
                 <div class="h-6 w-px bg-white/30 mx-1"></div>
                 <button onclick="app.startPresentation()" class="bg-white text-[#bf360c] hover:bg-gray-100 px-4 py-1.5 rounded shadow-sm text-sm font-bold transition flex items-center">
-                    <i class="fa-solid fa-play mr-2"></i> Present
+                    <i class="fa-solid fa-play mr-2"></i> Apresentar
                 </button>
             </div>
         </div>
@@ -143,38 +143,43 @@
             <div class="flex items-center gap-4">
                 <!-- Slide Controls -->
                 <div class="flex gap-1 border-r border-gray-300 pr-4">
-                    <button onclick="app.addSlide()" class="p-2 hover:bg-gray-200 rounded text-gray-700" title="New Slide">
-                        <i class="fa-solid fa-plus-square text-green-600"></i> <span class="text-sm font-medium">New Slide</span>
+                    <button onclick="app.addSlide()" class="p-2 hover:bg-gray-200 rounded text-gray-700" title="Novo Slide">
+                        <i class="fa-solid fa-plus-square text-green-600"></i> <span class="text-sm font-medium">Novo Slide</span>
                     </button>
-                    <button onclick="app.deleteCurrentSlide()" class="p-2 hover:bg-gray-200 rounded text-gray-700" title="Delete Slide">
+                    <button onclick="app.deleteCurrentSlide()" class="p-2 hover:bg-gray-200 rounded text-gray-700" title="Excluir Slide">
                         <i class="fa-solid fa-trash text-red-500"></i>
                     </button>
                 </div>
 
                 <!-- Insert Blocks (Draggable) -->
                 <div class="flex gap-2 items-center text-sm font-medium text-gray-600 select-none">
-                    <span class="uppercase text-xs font-bold text-gray-400 mr-1">Insert:</span>
+                    <span class="uppercase text-xs font-bold text-gray-400 mr-1">Inserir:</span>
                     <div draggable="true" ondragstart="app.handleDragStart(event, 'text')" class="cursor-grab active:cursor-grabbing px-3 py-1.5 bg-white border border-gray-300 rounded hover:shadow-md flex items-center gap-2 transition">
-                        <i class="fa-solid fa-font"></i> Text Box
+                        <i class="fa-solid fa-font"></i> Texto
                     </div>
                     <div draggable="true" ondragstart="app.handleDragStart(event, 'image')" class="cursor-grab active:cursor-grabbing px-3 py-1.5 bg-white border border-gray-300 rounded hover:shadow-md flex items-center gap-2 transition">
-                        <i class="fa-solid fa-image"></i> Image
+                        <i class="fa-solid fa-image"></i> Imagem
                     </div>
                     <div draggable="true" ondragstart="app.handleDragStart(event, 'shape')" class="cursor-grab active:cursor-grabbing px-3 py-1.5 bg-white border border-gray-300 rounded hover:shadow-md flex items-center gap-2 transition">
-                        <i class="fa-solid fa-shapes"></i> Box
+                        <i class="fa-solid fa-shapes"></i> Forma
                     </div>
                 </div>
             </div>
 
             <!-- Formatting -->
             <div class="flex items-center gap-2">
-                <button onclick="app.formatText('bold')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200"><i class="fa-solid fa-bold"></i></button>
-                <button onclick="app.formatText('italic')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200"><i class="fa-solid fa-italic"></i></button>
-                <button onclick="app.formatText('underline')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200"><i class="fa-solid fa-underline"></i></button>
+                <div class="flex items-center mr-2" title="Tamanho da Fonte">
+                    <span class="text-xs text-gray-500 mr-1"><i class="fa-solid fa-text-height"></i></span>
+                    <input type="number" id="fontSizeInput" min="8" max="120" value="16" onchange="app.changeFontSize(this.value)" class="w-16 p-1 border border-gray-300 rounded text-center text-sm">
+                </div>
+
+                <button onclick="app.formatText('bold')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200" title="Negrito"><i class="fa-solid fa-bold"></i></button>
+                <button onclick="app.formatText('italic')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200" title="Itálico"><i class="fa-solid fa-italic"></i></button>
+                <button onclick="app.formatText('underline')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200" title="Sublinhado"><i class="fa-solid fa-underline"></i></button>
                 <div class="h-6 w-px bg-gray-300 mx-1"></div>
-                <button onclick="app.formatText('justifyLeft')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200"><i class="fa-solid fa-align-left"></i></button>
-                <button onclick="app.formatText('justifyCenter')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200"><i class="fa-solid fa-align-center"></i></button>
-                <input type="color" id="colorPicker" onchange="app.formatText('foreColor', this.value)" class="w-8 h-8 p-0 border-0 rounded cursor-pointer" title="Text Color">
+                <button onclick="app.formatText('justifyLeft')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200" title="Alinhar Esquerda"><i class="fa-solid fa-align-left"></i></button>
+                <button onclick="app.formatText('justifyCenter')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200" title="Centralizar"><i class="fa-solid fa-align-center"></i></button>
+                <input type="color" id="colorPicker" onchange="app.formatText('foreColor', this.value)" class="w-8 h-8 p-0 border-0 rounded cursor-pointer" title="Cor do Texto">
             </div>
         </div>
     </header>
@@ -204,8 +209,8 @@
             </div>
             
             <!-- Speech Debug/Feedback Overlay -->
-            <div id="speech-feedback" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm opacity-0 transition-opacity pointer-events-none">
-                Listening for: <span id="target-phrase" class="font-bold text-yellow-300">...</span>
+            <div id="speech-feedback" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm opacity-0 transition-opacity pointer-events-none z-50">
+                Ouvindo por: <span id="target-phrase" class="font-bold text-yellow-300">...</span>
             </div>
 
         </main>
@@ -213,7 +218,7 @@
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
-        Notification
+        Notificação
     </div>
 
     <!-- Hidden File Input for Load -->
@@ -244,6 +249,7 @@
                 this.voiceBtnText = document.getElementById('voice-btn-text');
                 this.speechFeedback = document.getElementById('speech-feedback');
                 this.targetPhraseEl = document.getElementById('target-phrase');
+                this.fontSizeInput = document.getElementById('fontSizeInput');
                 
                 // Initial Setup
                 this.loadFromLocalStorage();
@@ -259,9 +265,24 @@
                 this.setupKeyboardNav();
                 this.setupAutoSave();
                 this.setupSpeechRecognition();
+                this.setupBroadcastListener();
             }
 
-            // --- Voice Recognition Logic ---
+            // --- Navigation Helpers ---
+
+            nextSlide() {
+                if (this.currentSlideIndex < this.slides.length - 1) {
+                    this.selectSlide(this.currentSlideIndex + 1);
+                }
+            }
+
+            prevSlide() {
+                if (this.currentSlideIndex > 0) {
+                    this.selectSlide(this.currentSlideIndex - 1);
+                }
+            }
+
+            // --- Voice Recognition Logic (Portuguese) ---
 
             setupSpeechRecognition() {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -275,7 +296,7 @@
                 this.recognition = new SpeechRecognition();
                 this.recognition.continuous = true;
                 this.recognition.interimResults = true;
-                this.recognition.lang = 'en-US';
+                this.recognition.lang = 'pt-BR'; // Alterado para Português
 
                 this.recognition.onresult = (event) => {
                     if (!this.isVoiceActive) return;
@@ -292,18 +313,16 @@
                             console.log(`Matched! "${transcript}" contains "${this.targetPhrase}"`);
                             
                             // Visual feedback
-                            this.showToast("Voice Trigger: Next Slide");
+                            this.showToast("Comando de Voz: Próximo Slide");
                             
                             // Trigger Next Slide
-                            if (this.currentSlideIndex < this.slides.length - 1) {
-                                this.selectSlide(this.currentSlideIndex + 1);
+                            this.nextSlide();
                                 
-                                // Reset recognition to prevent double triggers on same sentence
-                                this.recognition.abort(); 
-                                setTimeout(() => {
-                                    if(this.isVoiceActive) this.recognition.start();
-                                }, 100);
-                            }
+                            // Reset recognition to prevent double triggers on same sentence
+                            this.recognition.abort(); 
+                            setTimeout(() => {
+                                if(this.isVoiceActive) this.recognition.start();
+                            }, 100);
                         }
                     }
                 };
@@ -311,7 +330,7 @@
                 this.recognition.onerror = (event) => {
                     console.error("Speech recognition error", event.error);
                     if (event.error === 'not-allowed') {
-                        this.showToast("Microphone access denied.");
+                        this.showToast("Acesso ao microfone negado.");
                         this.setVoiceState(false);
                     }
                 };
@@ -326,7 +345,7 @@
 
             toggleVoiceControl() {
                 if (!this.recognition) {
-                    this.showToast("Voice control not supported.");
+                    this.showToast("Controle de voz não suportado.");
                     return;
                 }
                 this.setVoiceState(!this.isVoiceActive);
@@ -338,13 +357,13 @@
                 if (this.isVoiceActive) {
                     this.recognition.start();
                     this.voiceBtn.classList.add('recording-pulse');
-                    this.voiceBtnText.innerText = "Listening...";
+                    this.voiceBtnText.innerText = "Ouvindo...";
                     this.speechFeedback.classList.remove('opacity-0');
                     this.updateTargetPhrase(); // Calculate target immediately
                 } else {
                     this.recognition.stop();
                     this.voiceBtn.classList.remove('recording-pulse');
-                    this.voiceBtnText.innerText = "Voice Mode: Off";
+                    this.voiceBtnText.innerText = "Voz: Desl.";
                     this.speechFeedback.classList.add('opacity-0');
                 }
             }
@@ -363,7 +382,7 @@
                     .join(" ");
 
                 // Clean text: remove punctuation, extra spaces, lowercase
-                const cleanText = fullText.replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+                const cleanText = fullText.replace(/[^\w\sÀ-ÿ]|_/g, "").replace(/\s+/g, " ").trim().toLowerCase();
                 
                 if (!cleanText) return "";
 
@@ -382,7 +401,7 @@
                 if (this.targetPhrase) {
                     this.targetPhraseEl.innerText = `"${this.targetPhrase}"`;
                 } else {
-                    this.targetPhraseEl.innerText = "(No text found)";
+                    this.targetPhraseEl.innerText = "(Sem texto)";
                 }
             }
 
@@ -395,14 +414,14 @@
                         {
                             id: 'title-' + Date.now(),
                             type: 'text',
-                            content: 'Double click to add title',
-                            style: 'top: 10%; left: 10%; width: 80%; font-size: 2.5rem; font-weight: bold; text-align: center; color: #333;'
+                            content: 'Clique duas vezes para adicionar título',
+                            style: 'top: 10%; left: 10%; width: 80%; font-size: 40px; font-weight: bold; text-align: center; color: #333;'
                         },
                         {
                             id: 'subtitle-' + Date.now(),
                             type: 'text',
-                            content: 'Double click to add subtitle',
-                            style: 'top: 40%; left: 20%; width: 60%; font-size: 1.25rem; text-align: center; color: #666;'
+                            content: 'Clique duas vezes para adicionar subtítulo',
+                            style: 'top: 40%; left: 20%; width: 60%; font-size: 20px; text-align: center; color: #666;'
                         }
                     ]
                 };
@@ -426,7 +445,7 @@
 
             deleteCurrentSlide() {
                 if (this.slides.length <= 1) {
-                    this.showToast("Cannot delete the last slide.");
+                    this.showToast("Não é possível excluir o último slide.");
                     return;
                 }
                 this.slides.splice(this.currentSlideIndex, 1);
@@ -516,7 +535,7 @@
                 
                 // Make Editable
                 div.contentEditable = true;
-                div.setAttribute('placeholder', 'Type here...');
+                div.setAttribute('placeholder', 'Digite aqui...');
 
                 // Drag Logic Handlers
                 div.onmousedown = (e) => this.handleElementMouseDown(e, div, elData);
@@ -527,6 +546,11 @@
                      // Update voice target if text changes
                      if(this.isVoiceActive) this.updateTargetPhrase();
                 };
+                // Click to update font size input
+                div.onclick = () => {
+                    const fontSize = window.getComputedStyle(div).fontSize;
+                    this.fontSizeInput.value = parseInt(fontSize);
+                }
 
                 this.stage.appendChild(div);
             }
@@ -554,9 +578,9 @@
                 const newEl = {
                     id: 'el-' + Date.now(),
                     type: this.draggedItemType,
-                    content: this.draggedItemType === 'image' ? '<i class="fa-solid fa-image fa-3x text-gray-400"></i><br>Image Placeholder' : 
-                             this.draggedItemType === 'shape' ? '' : 'New Text Box',
-                    style: `top: ${y}%; left: ${x}%; position: absolute; min-width: 150px; min-height: 50px;`
+                    content: this.draggedItemType === 'image' ? '<i class="fa-solid fa-image fa-3x text-gray-400"></i><br>Imagem' : 
+                             this.draggedItemType === 'shape' ? '' : 'Caixa de Texto',
+                    style: `top: ${y}%; left: ${x}%; position: absolute; min-width: 150px; min-height: 50px; font-size: 20px;`
                 };
 
                 // Specific styles
@@ -581,6 +605,10 @@
                 
                 this.stage.querySelectorAll('.slide-element').forEach(el => el.classList.remove('selected'));
                 div.classList.add('selected');
+                
+                // Update font size input for selected
+                const fontSize = window.getComputedStyle(div).fontSize;
+                this.fontSizeInput.value = parseInt(fontSize);
 
                 const startX = e.clientX;
                 const startY = e.clientY;
@@ -633,6 +661,22 @@
                 this.saveCurrentSlideState();
             }
 
+            changeFontSize(val) {
+                // Try to change style of selected block first
+                const selected = this.stage.querySelector('.slide-element.selected');
+                if (selected) {
+                    selected.style.fontSize = val + 'px';
+                    this.saveCurrentSlideState();
+                } else {
+                    // If inside contenteditable but no block selected explicitly
+                    document.execCommand('fontSize', false, '7'); // temp
+                    // This is complex with contenteditable, so we prefer block level
+                    // Fallback: If user is typing, it's harder. 
+                    // For this app, we suggest selecting the block border first.
+                    this.showToast("Selecione a caixa (borda) para alterar o tamanho da fonte.");
+                }
+            }
+
             saveCurrentSlideState() {
                 if (this.currentSlideIndex >= this.slides.length) return;
 
@@ -662,16 +706,16 @@
                 const win = window.open('', 'WebPointPresentation', `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`);
                 
                 if (!win) {
-                    this.showToast("Pop-up blocked! Allow pop-ups to present.");
+                    this.showToast("Pop-up bloqueado! Permita pop-ups para apresentar.");
                     return;
                 }
 
                 // Inject Receiver Code
                 const htmlContent = `
                     <!DOCTYPE html>
-                    <html lang="en">
+                    <html lang="pt-BR">
                     <head>
-                        <title>WebPoint - Projection</title>
+                        <title>WebPoint - Projeção</title>
                         <script src="https://cdn.tailwindcss.com"><\/script>
                         <style>
                             body { background: black; margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -689,7 +733,7 @@
                     </head>
                     <body>
                         <div id="stage">
-                            <div class="h-full flex items-center justify-center text-gray-400">Waiting for presenter...</div>
+                            <div class="h-full flex items-center justify-center text-gray-400">Aguardando apresentador...</div>
                         </div>
                         <script>
                             const stage = document.getElementById('stage');
@@ -717,6 +761,15 @@
                                 });
                             }
                             
+                            // Capture arrow keys and send back to controller
+                            document.addEventListener('keydown', (e) => {
+                                if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+                                    bc.postMessage({ type: 'remote_nav', action: 'next' });
+                                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                                    bc.postMessage({ type: 'remote_nav', action: 'prev' });
+                                }
+                            });
+
                             // Signal readiness
                             bc.postMessage({ type: 'ready' });
                         <\/script>
@@ -730,6 +783,16 @@
 
                 // Sync immediately
                 setTimeout(() => this.broadcastCurrentSlide(), 500);
+            }
+
+            setupBroadcastListener() {
+                this.broadcastChannel.onmessage = (event) => {
+                    // Handle remote navigation from the projection window
+                    if (event.data.type === 'remote_nav') {
+                        if (event.data.action === 'next') this.nextSlide();
+                        if (event.data.action === 'prev') this.prevSlide();
+                    }
+                };
             }
 
             broadcastCurrentSlide() {
@@ -748,16 +811,11 @@
                     if (e.target.isContentEditable) return;
 
                     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                        if (this.currentSlideIndex < this.slides.length - 1) {
-                            this.selectSlide(this.currentSlideIndex + 1);
-                        }
+                        this.nextSlide();
                     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                        if (this.currentSlideIndex > 0) {
-                            this.selectSlide(this.currentSlideIndex - 1);
-                        }
+                        this.prevSlide();
                     } else if (e.key === 'Delete' || e.key === 'Backspace') {
-                        // Only delete if a slide element is selected (not the slide itself usually, but kept for safety)
-                        // Implementation of element deletion could go here
+                        // Logic for delete handled separately
                     }
                 });
             }
@@ -794,11 +852,11 @@
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.slides));
                 const downloadAnchorNode = document.createElement('a');
                 downloadAnchorNode.setAttribute("href", dataStr);
-                downloadAnchorNode.setAttribute("download", "presentation.json");
+                downloadAnchorNode.setAttribute("download", "apresentacao.json");
                 document.body.appendChild(downloadAnchorNode);
                 downloadAnchorNode.click();
                 downloadAnchorNode.remove();
-                this.showToast("Presentation saved to file!");
+                this.showToast("Apresentação salva!");
             }
 
             loadPresentation() {
@@ -816,10 +874,10 @@
                             this.slides = loadedSlides;
                             this.currentSlideIndex = 0;
                             this.updateUI();
-                            this.showToast("Presentation loaded successfully!");
+                            this.showToast("Apresentação carregada com sucesso!");
                         }
                     } catch (err) {
-                        this.showToast("Error parsing JSON file.");
+                        this.showToast("Erro ao ler arquivo JSON.");
                     }
                 };
                 reader.readAsText(file);
