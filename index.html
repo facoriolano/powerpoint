@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebPoint - Aplicativo de Apresentação</title>
+    <title>WebPoint - Apresentação Inteligente</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,10 +15,9 @@
         body {
             font-family: 'Segoe UI', sans-serif;
             background-color: #f3f4f6;
-            overflow: hidden; /* App-like feel */
+            overflow: hidden;
         }
 
-        /* Slide Aspect Ratio 16:9 */
         .slide-container {
             aspect-ratio: 16/9;
             background: white;
@@ -27,11 +26,10 @@
             overflow: hidden;
         }
 
-        /* Thumbnail specific styles */
+        /* Thumbnail styles */
         .thumbnail-wrapper {
             position: relative;
             width: 100%;
-            /* Aspect ratio trick handled by padding-top inside or dimensions */
             aspect-ratio: 16/9;
             background: #fff;
             border: 3px solid transparent;
@@ -44,19 +42,14 @@
             cursor: grabbing;
         }
         .thumbnail-wrapper.active {
-            border-color: #f97316; /* Orange border for active */
+            border-color: #f97316;
         }
         .thumbnail-wrapper.drag-over {
-            border-top: 3px solid #3b82f6; /* Blue line indicator */
+            border-top: 3px solid #3b82f6;
         }
 
-        /* Thumbnail Scaling Magic:
-           We create a container that thinks it is 1000px wide (arbitrary large width),
-           then we scale it down to fit the sidebar width (~220px).
-           This preserves text wrapping and layout exactly.
-        */
         .thumbnail-scale-container {
-            width: 1000px; /* Simulated Full Width */
+            width: 1000px; 
             aspect-ratio: 16/9;
             position: absolute;
             top: 0;
@@ -67,7 +60,6 @@
             user-select: none;
         }
 
-        /* Draggable Elements on Slide */
         .slide-element {
             position: absolute;
             border: 1px dashed transparent;
@@ -81,7 +73,6 @@
             cursor: move;
         }
         
-        /* Editable Content Areas */
         [contenteditable]:focus {
             outline: 2px solid #93c5fd;
             outline-offset: 2px;
@@ -90,10 +81,9 @@
             content: attr(placeholder);
             color: #9ca3af;
             pointer-events: none;
-            display: block; /* For Firefox */
+            display: block;
         }
 
-        /* Voice Recording Pulse Animation */
         @keyframes pulse-red {
             0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
@@ -106,36 +96,23 @@
             border-color: #dc2626 !important;
         }
 
-        /* Scrollbars */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #c1c1c1; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8; 
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
     </style>
 </head>
 <body class="h-screen flex flex-col text-gray-800">
 
     <!-- Header / Toolbar -->
     <header class="bg-white border-b border-gray-200 flex flex-col shrink-0 z-10">
-        <!-- Top Bar: Title and Global Actions -->
         <div class="h-12 px-4 flex items-center justify-between bg-[#bf360c] text-white">
             <div class="flex items-center gap-3">
                 <i class="fa-solid fa-presentation-screen text-xl"></i>
                 <h1 class="font-semibold text-lg tracking-wide">WebPoint</h1>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Voice Control Toggle -->
-                <button id="voice-btn" onclick="app.toggleVoiceControl()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-sm font-medium transition flex items-center border border-transparent" title="Comandos: 'Próximo', 'Avançar' ou ler texto do slide">
+                <button id="voice-btn" onclick="app.toggleVoiceControl()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-sm font-medium transition flex items-center border border-transparent" title="Comandos: 'Próximo', 'Avançar' ou ler final do slide">
                     <i class="fa-solid fa-microphone mr-2"></i> <span id="voice-btn-text">Voz: Desl.</span>
                 </button>
                 <div class="h-6 w-px bg-white/30 mx-1"></div>
@@ -152,10 +129,8 @@
             </div>
         </div>
 
-        <!-- Toolbar: Formatting & Insert -->
         <div class="h-12 px-4 flex items-center justify-between bg-gray-50">
             <div class="flex items-center gap-4">
-                <!-- Slide Controls -->
                 <div class="flex gap-1 border-r border-gray-300 pr-4">
                     <button onclick="app.addSlide()" class="p-2 hover:bg-gray-200 rounded text-gray-700" title="Novo Slide">
                         <i class="fa-solid fa-plus-square text-green-600"></i> <span class="text-sm font-medium">Novo</span>
@@ -165,7 +140,6 @@
                     </button>
                 </div>
 
-                <!-- Insert Blocks (Draggable) -->
                 <div class="flex gap-2 items-center text-sm font-medium text-gray-600 select-none">
                     <span class="uppercase text-xs font-bold text-gray-400 mr-1">Inserir:</span>
                     <div draggable="true" ondragstart="app.handleDragStart(event, 'text')" class="cursor-grab active:cursor-grabbing px-3 py-1.5 bg-white border border-gray-300 rounded hover:shadow-md flex items-center gap-2 transition">
@@ -180,7 +154,6 @@
                 </div>
             </div>
 
-            <!-- Formatting -->
             <div class="flex items-center gap-2">
                 <div class="flex items-center mr-2" title="Tamanho da Fonte">
                     <span class="text-xs text-gray-500 mr-1"><i class="fa-solid fa-text-height"></i></span>
@@ -198,67 +171,44 @@
         </div>
     </header>
 
-    <!-- Main Workspace -->
     <div class="flex-1 flex overflow-hidden">
-        
-        <!-- Sidebar: Thumbnails -->
         <aside class="w-72 bg-gray-100 border-r border-gray-200 flex flex-col p-4 gap-4 shrink-0 overflow-hidden">
-            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Slides (Arraste para reordenar)</h3>
-            <div id="thumbnails-container" class="flex-1 overflow-y-auto flex flex-col gap-4 pb-4">
-                <!-- Thumbnails generated here -->
-            </div>
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Slides (Arraste para mover)</h3>
+            <div id="thumbnails-container" class="flex-1 overflow-y-auto flex flex-col gap-4 pb-4"></div>
         </aside>
 
-        <!-- Editor Canvas -->
         <main class="flex-1 bg-gray-200 overflow-auto flex items-center justify-center p-8 relative" id="main-scroll-area">
-            
-            <!-- Slide Stage -->
             <div 
                 id="slide-stage" 
                 class="slide-container bg-white w-full max-w-4xl transition-transform"
                 ondragover="app.handleDragOver(event)"
                 ondrop="app.handleDrop(event)"
                 onclick="app.deselectAll(event)"
-            >
-                <!-- Active Slide Content Goes Here -->
-            </div>
+            ></div>
             
-            <!-- Speech Debug/Feedback Overlay -->
             <div id="speech-feedback" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm opacity-0 transition-opacity pointer-events-none z-50">
-                <div class="text-xs text-gray-300 text-center">Comandos: "Próximo" ou ler texto</div>
-                <div class="mt-1 text-center">Alvo: <span id="target-phrase" class="font-bold text-yellow-300">...</span></div>
+                <div class="text-xs text-gray-300 text-center">Alvo Visual Detectado:</div>
+                <div class="mt-1 text-center text-lg"><span id="target-phrase" class="font-bold text-yellow-300">...</span></div>
             </div>
-
         </main>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
-        Notificação
-    </div>
-
-    <!-- Hidden File Input for Load -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">Notificação</div>
     <input type="file" id="file-input" class="hidden" accept=".json" onchange="app.handleFileSelect(event)">
 
     <script>
-        /**
-         * WebPoint Presentation Application
-         */
         class PresentationApp {
             constructor() {
-                // State
                 this.slides = [];
                 this.currentSlideIndex = 0;
-                this.draggedItemType = null; // For adding new elements
-                this.draggingSlideIndex = null; // For reordering slides
+                this.draggedItemType = null; 
+                this.draggingSlideIndex = null; 
                 this.broadcastChannel = new BroadcastChannel('webpoint_presentation');
                 
-                // Voice Control State
                 this.recognition = null;
                 this.isVoiceActive = false;
                 this.targetPhrase = "";
 
-                // DOM Elements
                 this.stage = document.getElementById('slide-stage');
                 this.thumbnailsContainer = document.getElementById('thumbnails-container');
                 this.voiceBtn = document.getElementById('voice-btn');
@@ -267,7 +217,6 @@
                 this.targetPhraseEl = document.getElementById('target-phrase');
                 this.fontSizeInput = document.getElementById('fontSizeInput');
                 
-                // Initial Setup
                 this.loadFromLocalStorage();
                 if (!this.slides || this.slides.length === 0) {
                     this.slides = [];
@@ -277,14 +226,11 @@
                     this.renderCurrentSlide();
                 }
 
-                // Event Listeners
                 this.setupKeyboardNav();
                 this.setupAutoSave();
                 this.setupSpeechRecognition();
                 this.setupBroadcastListener();
             }
-
-            // --- Navigation Helpers ---
 
             nextSlide() {
                 if (this.currentSlideIndex < this.slides.length - 1) {
@@ -298,7 +244,7 @@
                 }
             }
 
-            // --- Voice Recognition Logic (Portuguese) ---
+            // --- Advanced Voice Recognition Logic ---
 
             normalizeText(text) {
                 return text
@@ -306,7 +252,14 @@
                     .normalize("NFD")
                     .replace(/[\u0300-\u036f]/g, "") // Remove accents
                     .replace(/[^\w\s]/g, "") // Remove punctuation
+                    .replace(/\s+/g, " ")
                     .trim();
+            }
+
+            // Remove stop words for fuzzy matching
+            getKeyWords(text) {
+                const stopWords = ['o', 'a', 'os', 'as', 'de', 'do', 'da', 'em', 'no', 'na', 'que', 'e'];
+                return text.split(' ').filter(w => !stopWords.includes(w) && w.length > 1);
             }
 
             setupSpeechRecognition() {
@@ -314,7 +267,6 @@
                 
                 if (!SpeechRecognition) {
                     this.voiceBtn.style.display = 'none';
-                    console.warn("Web Speech API not supported.");
                     return;
                 }
 
@@ -326,44 +278,50 @@
                 this.recognition.onresult = (event) => {
                     if (!this.isVoiceActive) return;
 
-                    // Get the latest result
-                    const resultsLength = event.results.length;
-                    const latestResult = event.results[resultsLength - 1];
-                    let transcript = latestResult[0].transcript;
-                    
-                    // Normalize: lowercase, remove accents
-                    const cleanTranscript = this.normalizeText(transcript);
+                    const latestResult = event.results[event.results.length - 1];
+                    let transcript = this.normalizeText(latestResult[0].transcript);
 
-                    console.log("Ouvido:", cleanTranscript);
+                    console.log("Ouvido:", transcript);
 
                     let triggered = false;
 
-                    // 1. Check for Command: "Próximo slide" / "Avançar"
-                    if (cleanTranscript.includes("proximo") || cleanTranscript.includes("avancar")) {
+                    // 1. Explicit Commands
+                    if (transcript.includes("proximo") || transcript.includes("avancar")) {
                          triggered = true;
-                         this.showToast("Comando Voz: Próximo");
+                         this.showToast("Comando: Próximo Slide");
                     } 
-                    // 2. Check for Slide Text Content (Sliding window match)
-                    else if (this.targetPhrase && this.targetPhrase.length > 0) {
-                        if (cleanTranscript.includes(this.targetPhrase)) {
+                    // 2. Content Matching
+                    else if (this.targetPhrase) {
+                        // Simple inclusion check
+                        if (transcript.includes(this.targetPhrase)) {
                             triggered = true;
-                            this.showToast("Texto Lido: Próximo Slide");
+                            this.showToast("Texto Lido: Avançando...");
+                        } 
+                        else {
+                            // Fallback: Check keywords match if strict match fails
+                            const transcriptWords = this.getKeyWords(transcript);
+                            const targetWords = this.getKeyWords(this.targetPhrase);
+                            
+                            // Check if the last 2 spoken keywords match the target keywords
+                            if (targetWords.length > 0 && transcriptWords.length >= 2) {
+                                const lastSpoken = transcriptWords.slice(-2).join(" ");
+                                const targetEnd = targetWords.slice(-2).join(" ");
+                                if (lastSpoken === targetEnd) {
+                                    triggered = true;
+                                    this.showToast("Palavras-chave Detectadas");
+                                }
+                            }
                         }
                     }
 
-                    if (triggered && latestResult.isFinal) {
-                         this.nextSlide();
-                    } else if (triggered && !latestResult.isFinal) {
-                        // If we catch it in interim, force jump and reset
+                    if (triggered) {
                         this.nextSlide();
-                        this.recognition.abort(); 
+                        this.recognition.abort(); // Restart stream
                     }
                 };
 
                 this.recognition.onend = () => {
-                    if (this.isVoiceActive) {
-                        setTimeout(() => this.recognition.start(), 500);
-                    }
+                    if (this.isVoiceActive) setTimeout(() => this.recognition.start(), 500);
                 };
             }
 
@@ -391,8 +349,20 @@
             getSlideTargetPhrase(slide) {
                 if (!slide || !slide.elements) return "";
 
-                // Combine text
-                const fullText = slide.elements
+                // IMPORTANT: Clone elements to sort without affecting original slide
+                // Sort by TOP position (Visual Reading Order)
+                const sortedElements = [...slide.elements].sort((a, b) => {
+                    // Extract numerical value from "10%" or "10px" or "10"
+                    const getVal = (styleStr) => {
+                        const topMatch = styleStr.match(/top:\s*([\d.]+)%/);
+                        if (topMatch) return parseFloat(topMatch[1]);
+                        return 0;
+                    };
+                    return getVal(a.style) - getVal(b.style);
+                });
+
+                // Combine text from sorted elements
+                const fullText = sortedElements
                     .filter(el => el.type === 'text')
                     .map(el => {
                         const tmp = document.createElement('div');
@@ -404,22 +374,16 @@
                 const cleanText = this.normalizeText(fullText);
                 if (!cleanText) return "";
 
-                // Get last 3-4 words for better matching context
+                // Get last 3 words (reduced form 4 to increase hit rate on labels)
                 const words = cleanText.split(/\s+/);
-                const numWords = Math.min(4, words.length);
-                const lastWords = words.slice(-numWords).join(" ");
-                
-                return lastWords;
+                const numWords = Math.min(3, words.length);
+                return words.slice(-numWords).join(" ");
             }
 
             updateTargetPhrase() {
                 const slide = this.slides[this.currentSlideIndex];
                 this.targetPhrase = this.getSlideTargetPhrase(slide);
-                if (this.targetPhrase) {
-                    this.targetPhraseEl.innerText = `"${this.targetPhrase}"`;
-                } else {
-                    this.targetPhraseEl.innerText = "(Sem texto)";
-                }
+                this.targetPhraseEl.innerText = this.targetPhrase ? `"${this.targetPhrase}"` : "(Sem texto)";
             }
 
             // --- Slide Management ---
@@ -475,32 +439,24 @@
                 if (this.isVoiceActive) this.updateTargetPhrase();
             }
 
-            // --- Thumbnail & Reordering Logic ---
-
             renderThumbnails() {
                 this.thumbnailsContainer.innerHTML = '';
-                const containerWidth = this.thumbnailsContainer.clientWidth - 32; // approx padding
-                
-                // Calculate scale factor: The 'virtual' slide is 1000px wide. 
-                // We need to fit it into the sidebar width.
+                const containerWidth = this.thumbnailsContainer.clientWidth - 32; 
                 const scale = containerWidth / 1000;
 
                 this.slides.forEach((slide, index) => {
                     const wrapper = document.createElement('div');
                     wrapper.className = `thumbnail-wrapper ${index === this.currentSlideIndex ? 'active' : ''}`;
-                    wrapper.draggable = true; // Enable drag for slide reordering
+                    wrapper.draggable = true;
                     
-                    // Drag Events for Reordering
                     wrapper.ondragstart = (e) => this.handleThumbDragStart(e, index);
                     wrapper.ondragover = (e) => this.handleThumbDragOver(e, wrapper);
                     wrapper.ondragleave = (e) => wrapper.classList.remove('drag-over');
                     wrapper.ondrop = (e) => this.handleThumbDrop(e, index);
                     wrapper.onclick = () => this.selectSlide(index);
 
-                    // Scaled Content Container
                     const scaleContainer = document.createElement('div');
                     scaleContainer.className = 'thumbnail-scale-container';
-                    // Apply scale dynamically based on sidebar width
                     scaleContainer.style.transform = `scale(${scale})`;
 
                     slide.elements.forEach(el => {
@@ -524,15 +480,13 @@
                 if(activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
 
-            // --- Reordering Handlers ---
             handleThumbDragStart(e, index) {
                 this.draggingSlideIndex = index;
                 e.dataTransfer.effectAllowed = 'move';
-                // Small delay to let UI update before drag image is set (optional)
             }
 
             handleThumbDragOver(e, wrapper) {
-                e.preventDefault(); // Necessary to allow dropping
+                e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
                 wrapper.classList.add('drag-over');
             }
@@ -543,20 +497,14 @@
                 
                 if (this.draggingSlideIndex === null || this.draggingSlideIndex === dropIndex) return;
 
-                // Reorder array
                 const slideToMove = this.slides[this.draggingSlideIndex];
                 this.slides.splice(this.draggingSlideIndex, 1);
                 this.slides.splice(dropIndex, 0, slideToMove);
 
-                // Update selection to follow the moved slide
                 this.currentSlideIndex = dropIndex;
                 this.draggingSlideIndex = null;
-                
-                this.updateUI(); // Re-render
+                this.updateUI();
             }
-
-
-            // --- Rendering Main Stage ---
 
             renderCurrentSlide() {
                 const slide = this.slides[this.currentSlideIndex];
@@ -583,7 +531,6 @@
                 div.contentEditable = true;
                 div.setAttribute('placeholder', 'Digite...');
 
-                // Events
                 div.onmousedown = (e) => this.handleElementMouseDown(e, div, elData);
                 div.oninput = () => {
                      elData.content = div.innerHTML;
@@ -598,8 +545,6 @@
                 this.stage.appendChild(div);
             }
 
-            // --- Drag and Drop (Insert Elements) ---
-
             handleDragStart(e, type) {
                 this.draggedItemType = type;
                 e.dataTransfer.effectAllowed = 'copy';
@@ -612,9 +557,6 @@
 
             handleDrop(e) {
                 e.preventDefault();
-                // Distinction: Dropping a new element vs Reordering slides
-                // If draggedItemType is null, it might be a slide reorder (handled by handleThumbDrop)
-                // But handleThumbDrop is on the sidebar. This is the stage.
                 if (!this.draggedItemType) return;
 
                 const rect = this.stage.getBoundingClientRect();
@@ -640,8 +582,6 @@
                 if(this.isVoiceActive) this.updateTargetPhrase();
             }
 
-            // --- Element Moving Logic ---
-            
             handleElementMouseDown(e, div, elData) {
                 if (document.activeElement === div) return;
                 e.stopPropagation();
@@ -673,6 +613,7 @@
                     elData.style = div.style.cssText;
                     this.renderThumbnails();
                     this.broadcastCurrentSlide();
+                    if(this.isVoiceActive) this.updateTargetPhrase(); // Re-calc if moved visually (though this just updates position prop, sort logic needs saving first really)
                 };
 
                 document.addEventListener('mousemove', onMouseMove);
@@ -685,8 +626,6 @@
                 }
             }
 
-            // --- Formatting ---
-
             formatText(command, value = null) {
                 document.execCommand(command, false, value);
                 this.saveCurrentSlideState();
@@ -696,15 +635,13 @@
                 const selected = this.stage.querySelector('.slide-element.selected');
                 if (selected) {
                     selected.style.fontSize = val + 'px';
-                    // Also update the internal data model immediately
                     const elId = selected.id;
                     const dataEl = this.slides[this.currentSlideIndex].elements.find(e => e.id === elId);
                     if(dataEl) dataEl.style = selected.style.cssText;
-                    
-                    this.renderThumbnails(); // Refresh thumb to see font size change
+                    this.renderThumbnails(); 
                 } else {
                     document.execCommand('fontSize', false, '7'); 
-                    this.showToast("Dica: Selecione a borda da caixa para mudar a fonte.");
+                    this.showToast("Selecione a borda para mudar a fonte.");
                 }
             }
 
@@ -721,8 +658,6 @@
                 });
                 this.saveToLocalStorage();
             }
-
-            // --- Projection ---
 
             startPresentation() {
                 const width = window.screen.width * 0.8;
@@ -762,12 +697,10 @@
                         <script>
                             const stage = document.getElementById('stage');
                             const bc = new BroadcastChannel('webpoint_presentation');
-                            
                             bc.onmessage = (event) => {
                                 const { slide } = event.data;
                                 renderSlide(slide);
                             };
-
                             function renderSlide(slide) {
                                 stage.innerHTML = '';
                                 if(!slide) return;
@@ -782,7 +715,6 @@
                                     stage.appendChild(div);
                                 });
                             }
-                            
                             document.addEventListener('keydown', (e) => {
                                 if (['ArrowRight', 'ArrowDown', 'Space'].includes(e.code)) {
                                     bc.postMessage({ type: 'remote_nav', action: 'next' });
@@ -790,7 +722,6 @@
                                     bc.postMessage({ type: 'remote_nav', action: 'prev' });
                                 }
                             });
-
                             bc.postMessage({ type: 'ready' });
                         <\/script>
                     </body>
@@ -819,8 +750,6 @@
                     });
                 }
             }
-
-            // --- Utils & Persistence ---
 
             setupKeyboardNav() {
                 document.addEventListener('keydown', (e) => {
